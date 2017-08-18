@@ -121,13 +121,13 @@ void inline RSE_updateLineWriter(void)
 	switch(writer_state)
 	{
 		case WRT_CENTER_CUR_LINE:
-			current_string_len = computeStringLen(demo_strings[current_string_idx]);
+			current_string_len = computeStringLen((char *)demo_strings[current_string_idx]);
 			current_char_x = ((320 / 8) - current_string_len) >> 1;
 			writer_state = WRT_WRITE_CUR_LINE;
 			break;
 
 		case WRT_WRITE_CUR_LINE:
-			if (!RSE_drawString(demo_strings[current_string_idx]))
+			if (!RSE_drawString((char *)demo_strings[current_string_idx]))
 			{
 				writer_timer = 0;
 				writer_state = WRT_WAIT;

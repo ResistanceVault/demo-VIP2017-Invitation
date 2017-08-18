@@ -7,13 +7,6 @@
 #define	TABLE_LEN 220
 #define MAX_DONUT 16
 
-typedef struct
-{
-    Vect2D_f16 pos;
-    Vect2D_f16 mov;
-    u16 timer;
-} Object;
-
 static u16 tileIndexes[64];
 
 static void fastStarFieldFX();
@@ -26,6 +19,7 @@ int main(){
 	return 0;
 }
 
+u16 vramIndex;
 u8 figure_mode = 0;
 s16 i, ns, s, ind, figure_counter = 0;
 static Object objects[256];
@@ -35,33 +29,39 @@ u16 phase_counter = 0;
 
 static void fastStarFieldFX()
 {
-	u16 vramIndex = TILE_USERINDEX;
-	SYS_disableInts();
+	DMA_setAutoFlush(FALSE);
+	DMA_setMaxTransferSize(0);
 
-	VDP_clearPlan(PLAN_A, 0);
-	VDP_clearPlan(PLAN_B, 0);
-	VDP_setPlanSize(64, 32);
+	vramIndex = TILE_USERINDEX;
+	RSE_clearAll();
 
 	RSE_turn_screen_to_black();
+	VDP_setPlanSize(64, 32);
+	VDP_clearPlan(PLAN_A, TRUE);
+	VDP_clearPlan(PLAN_B, TRUE);
 
-	for(i = 0; i < 128; i++)
+	for(i = 0; i < 30; i++)
 		VDP_waitVSync();
 
-	/* Load the fond tiles */
-	VDP_drawImageEx(PLAN_B, &amiga_font, TILE_ATTR_FULL(PAL1, FALSE, FALSE, FALSE, vramIndex), 0, 0, FALSE, FALSE);
-	vramIndex += amiga_font.tileset->numTile;
+	VDP_waitDMACompletion();
 
-	// for (i = 0; i < 224 >> 3; i++)
-	// 	RSE_clearTileRowAPrioTrue(i);
+	VDP_setEnable(0);
+
+	/* Load the fond tiles */
+	VDP_loadTileSet(amiga_font.tileset, vramIndex, TRUE);
+	vramIndex += amiga_font.tileset->numTile;	
 
 	/* Draw the foreground */
-	VDP_drawImageEx(PLAN_B, &starfield, TILE_ATTR_FULL(PAL1, FALSE, FALSE, FALSE, vramIndex), 0, 0, FALSE, FALSE);
-	VDP_drawImageEx(PLAN_B, &starfield, TILE_ATTR_FULL(PAL1, FALSE, FALSE, FALSE, vramIndex), 256 >> 3, 0, FALSE, FALSE);	
+	VDP_drawImageEx(PLAN_B, &starfield, TILE_ATTR_FULL(PAL1, FALSE, FALSE, FALSE, vramIndex), 0, 0, FALSE, TRUE);
+	VDP_drawImageEx(PLAN_B, &starfield, TILE_ATTR_FULL(PAL1, FALSE, FALSE, FALSE, vramIndex), 256 >> 3, 0, FALSE, TRUE);
 	vramIndex += starfield.tileset->numTile; 	
 
 	/* Draw the logo */
-	VDP_drawImageEx(PLAN_A, &vip_logo, TILE_ATTR_FULL(PAL0, TRUE, FALSE, FALSE, vramIndex), (320 - 256) >> 4, (224 - 144) >> 4, FALSE, FALSE);
+	VDP_drawImageEx(PLAN_A, &vip_logo, TILE_ATTR_FULL(PAL0, TRUE, FALSE, FALSE, vramIndex), (320 - 256) >> 4, (224 - 144) >> 4, FALSE, TRUE);
 	vramIndex += vip_logo.tileset->numTile; 	
+
+	DMA_flushQueue();
+	VDP_setEnable(1);
 
 	/*	Set the proper scrolling mode (line by line) */
 	VDP_setScrollingMode(HSCROLL_LINE, VSCROLL_PLANE);
@@ -83,14 +83,14 @@ static void fastStarFieldFX()
 	/* Setup the sprites */
 	SPR_init(0,0,0);
 
-    ind = vramIndex;
+    // ind = vramIndex;
     for(i = 0; i < donut.animations[0]->numFrame; i++)
     {
         TileSet* tileset = donut.animations[0]->frames[i]->tileset;
 
-        VDP_loadTileSet(tileset, ind, TRUE);
-        tileIndexes[i] = ind;
-        ind += tileset->numTile;
+        VDP_loadTileSet(tileset, vramIndex, TRUE);
+        tileIndexes[i] = vramIndex;
+        vramIndex += tileset->numTile;
     }
 
 	for(i = 0; i < MAX_DONUT; i++)
@@ -103,18 +103,9 @@ static void fastStarFieldFX()
 
 	// SPR_update(sprites, MAX_DONUT);
 
-	// VDP_setPalette(PAL0, vip_logo.palette->data);
-	// VDP_setPalette(PAL1, starfield.palette->data);
-	// VDP_setPalette(PAL2, donut.palette->data);
 	VDP_setPalette(PAL3, amiga_font.palette->data);
 
 	VDP_setHilightShadow(0); 
-
-	SYS_enableInts();
-
-	// VDP_fadePalTo(PAL1, starfield.palette->data, 16, FALSE);
-	// VDP_fadePalTo(PAL0, vip_logo.palette->data, 16, FALSE);
-	// VDP_fadePalTo(PAL2, donut.palette->data, 16, FALSE);
 
 	/* writer setup */
 	current_string_idx = 0;
@@ -123,17 +114,16 @@ static void fastStarFieldFX()
 	writer_timer = 0;
 	writer_switch = FALSE;
 
-	writer_state = WRT_CENTER_CUR_LINE;		
+	writer_state = WRT_CENTER_CUR_LINE;
 
-	SND_startPlay_XGM(maak_music_2);
-	SND_setMusicTempo_XGM(50);	
+	SND_startPlay_VGM(maak_music_2);
 
 	/*	Start !!!! */
-
 	s = 0;
 	while (TRUE)
 	{
 		VDP_waitVSync();
+		DMA_flushQueue();
 
 		switch(demo_phase)
 		{
@@ -174,7 +164,6 @@ static void fastStarFieldFX()
 
 			writer_switch = !writer_switch;					
 		}
-		// BMP_showFPS(1);
 
 		/* 	Scroll the starfield */
 		VDP_setHorizontalScrollLine(PLAN_B, 2, scroll_PLAN_B, TABLE_LEN, TRUE);
@@ -184,9 +173,6 @@ static void fastStarFieldFX()
 		/*	Animate the donuts */
 		for(i = 0; i < MAX_DONUT; i++)
 		{
-			// sprites[i]->x = (cosFix16(s + (i << 5)) << 1) + 160 - 16 + 0x80;
-			// sprites[i]->y = sinFix16(s + (i << 5)) + 112 - 16 + 0x80;
-			
 			switch(figure_mode)
 			{
 				case 0:
@@ -210,7 +196,6 @@ static void fastStarFieldFX()
 					break;
 			}
 			SPR_setVRAMTileIndex(sprites[i], tileIndexes[((s >> 4) + i) & 0x7]);
-			// SPR_setFrame(sprites[i], ((s >> 4) + i) & 0x7);
 		}
 
 		SPR_update(sprites, MAX_DONUT);

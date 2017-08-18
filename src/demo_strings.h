@@ -3,6 +3,9 @@ const char *demo_strings[] =
 	/*
 	"<----------- MAX HEADROOM ------------->\0"
 	*/
+	"VIP2017 INTROINVITE, FINAL VERSION\0",
+	"FIXED AT EVOKE2017, KOELN, GERMANY\0",
+
 	"HEY, GIRLS AND BOYS\0",
 	"THIS IS RESISTANCE SPEAKING :\0",
 
@@ -35,7 +38,8 @@ const char *demo_strings[] =
 
 	"VIP LOGO BY OURS\0",
 	"MUSIC BY MAAK\0",
-	"CODED BY FRA IN 4 HOURS :)\0",
+	"CODED BY FRA IN 4 HOURS\0",
+	"DMA FIX OF THE FINAL VERSION BY GLIGLI\0",
 
 	"THANKS MAAK FOR THE GREAT TUNE!\0",
 

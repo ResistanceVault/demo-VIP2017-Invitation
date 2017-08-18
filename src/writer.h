@@ -1,3 +1,4 @@
+#pragma once
 #include <genesis.h>
 
 /*
@@ -14,10 +15,10 @@
 #define PLAN_B_TILE_H 20
 #define PLAN_A_TILE_H 10
 
-u16 inline computeStringLen(char *str);
-u16 inline charToTileIndex(char c);
+u16 computeStringLen(char *str);
+u16 charToTileIndex(char c);
 u16 RSE_drawString(char *str);
-void inline RSE_updateLineWriter(void);
+void RSE_updateLineWriter(void);
 
 extern u16 writer_state;
 extern u16 writer_switch;
